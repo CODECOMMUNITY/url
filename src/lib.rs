@@ -193,14 +193,14 @@ fn encode_inner<T: BytesContainer>(c: T, full_url: bool) -> String {
             'A' ... 'Z'
             | 'a' ... 'z'
             | '0' ... '9'
-            | '-' | '.' | '_' | '~' => out.push_char(b as char),
+            | '-' | '.' | '_' | '~' => out.push(b as char),
 
             // gen-delims:
             ':' | '/' | '?' | '#' | '[' | ']' | '@' |
             // sub-delims:
             '!' | '$' | '&' | '"' | '(' | ')' | '*' |
             '+' | ',' | ';' | '='
-                if full_url => out.push_char(b as char),
+                if full_url => out.push(b as char),
 
             ch => out.push_str(format!("%{:02X}", ch as uint).as_slice()),
         };
@@ -283,15 +283,15 @@ fn decode_inner<T: BytesContainer>(c: T, full_url: bool) -> DecodeResult<String>
                         '!' | '$' | '&' | '"' | '(' | ')' | '*' |
                         '+' | ',' | ';' | '='
                             if full_url => {
-                            out.push_char('%');
-                            out.push_char(bytes[0u] as char);
-                            out.push_char(bytes[1u] as char);
+                            out.push('%');
+                            out.push(bytes[0u] as char);
+                            out.push(bytes[1u] as char);
                         }
 
-                        ch => out.push_char(ch)
+                        ch => out.push(ch)
                     }
                 }
-                ch => out.push_char(ch)
+                ch => out.push(ch)
             },
             None => return Ok(out),
         }
@@ -306,8 +306,8 @@ pub fn encode_form_urlencoded(m: &HashMap<String, Vec<String>>) -> String {
               'A' ... 'Z'
               | 'a' ... 'z'
               | '0' ... '9'
-              | '_' | '.' | '-' => out.push_char(b as char),
-              ' ' => out.push_char('+'),
+              | '_' | '.' | '-' => out.push(b as char),
+              ' ' => out.push('+'),
               ch => out.push_str(format!("%{:X}", ch as uint).as_slice())
             }
 
@@ -323,11 +323,11 @@ pub fn encode_form_urlencoded(m: &HashMap<String, Vec<String>>) -> String {
             if first {
                 first = false;
             } else {
-                out.push_char('&');
+                out.push('&');
             }
 
             out.push_str(key.as_slice());
-            out.push_char('=');
+            out.push('=');
             out.push_str(encode_plus(value).as_slice());
         }
 
@@ -384,9 +384,9 @@ pub fn decode_form_urlencoded(s: &[u8])
                     };
 
                     if parsing_key {
-                        key.push_char(ch)
+                        key.push(ch)
                     } else {
-                        value.push_char(ch)
+                        value.push(ch)
                     }
                 }
             },
@@ -444,11 +444,11 @@ fn query_from_str(rawquery: &str) -> DecodeResult<Query> {
 pub fn query_to_str(query: &Query) -> String {
     query.iter().enumerate().fold(String::new(), |mut out, (i, &(ref k, ref v))| {
         if i != 0 {
-            out.push_char('&');
+            out.push('&');
         }
 
         out.push_str(encode_component(k.as_slice()).as_slice());
-        out.push_char('=');
+        out.push('=');
         out.push_str(encode_component(v.as_slice()).as_slice());
         out
     })
@@ -1236,8 +1236,8 @@ mod tests {
         let s = "a=1&foo+bar=abc&foo+bar=12+%3D+34".as_bytes();
         let form = decode_form_urlencoded(s).unwrap();
         assert_eq!(form.len(), 2);
-        assert_eq!(form.get(&"a".to_string()), &vec!("1".to_string()));
-        assert_eq!(form.get(&"foo bar".to_string()),
-                   &vec!("abc".to_string(), "12 = 34".to_string()));
+        assert_eq!(form["a".to_string()], vec!("1".to_string()));
+        assert_eq!(form["foo bar".to_string()],
+                   vec!("abc".to_string(), "12 = 34".to_string()));
     }
 }
