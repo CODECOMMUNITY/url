@@ -23,7 +23,7 @@
 #![feature(default_type_params)]
 
 use std::collections::HashMap;
-use std::collections::hashmap::{Occupied, Vacant};
+use std::collections::hash_map::{Occupied, Vacant};
 use std::fmt;
 use std::from_str::FromStr;
 use std::hash;
