@@ -27,8 +27,9 @@ use std::collections::hash_map::{Occupied, Vacant};
 use std::fmt;
 use std::from_str::FromStr;
 use std::hash;
-use std::uint;
+use std::num::FromStrRadix;
 use std::path::BytesContainer;
+use std::str;
 
 /// A Uniform Resource Locator (URL).  A URL is a form of URI (Uniform Resource
 /// Identifier) that includes network location information, such as hostname or
@@ -275,7 +276,9 @@ fn decode_inner<T: BytesContainer>(c: T, full_url: bool) -> DecodeResult<String>
                     };
 
                     // Only decode some characters if full_url:
-                    match uint::parse_bytes(bytes, 16u).unwrap() as u8 as char {
+                    let s = str::from_utf8(bytes).unwrap();
+                    let u: uint = FromStrRadix::from_str_radix(s, 16u).unwrap();
+                    match u as u8 as char {
                         // gen-delims:
                         ':' | '/' | '?' | '#' | '[' | ']' | '@' |
 
@@ -377,7 +380,9 @@ pub fn decode_form_urlencoded(s: &[u8])
                                                 '%' without two trailing bytes"))
                             };
 
-                            uint::parse_bytes(bytes, 16u).unwrap() as u8 as char
+                            let s = str::from_utf8(bytes).unwrap();
+                            let u: uint = FromStrRadix::from_str_radix(s, 16u).unwrap();
+                            u as u8 as char
                         }
                         '+' => ' ',
                         ch => ch
