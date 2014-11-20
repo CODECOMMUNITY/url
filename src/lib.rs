@@ -276,7 +276,7 @@ fn decode_inner<T: BytesContainer>(c: T, full_url: bool) -> DecodeResult<String>
                     };
 
                     // Only decode some characters if full_url:
-                    let s = str::from_utf8(bytes).unwrap();
+                    let s = str::from_utf8(&bytes).unwrap();
                     let u: uint = FromStrRadix::from_str_radix(s, 16u).unwrap();
                     match u as u8 as char {
                         // gen-delims:
@@ -380,7 +380,7 @@ pub fn decode_form_urlencoded(s: &[u8])
                                                 '%' without two trailing bytes"))
                             };
 
-                            let s = str::from_utf8(bytes).unwrap();
+                            let s = str::from_utf8(&bytes).unwrap();
                             let u: uint = FromStrRadix::from_str_radix(s, 16u).unwrap();
                             u as u8 as char
                         }
@@ -711,8 +711,8 @@ fn get_query_fragment(rawurl: &str) -> DecodeResult<(Query, Option<String>)> {
     };
 
     match before_fragment.slice_shift_char() {
-        (Some('?'), rest) => Ok((try!(query_from_str(rest)), fragment)),
-        (None, "") => Ok((vec!(), fragment)),
+        Some(('?', rest)) => Ok((try!(query_from_str(rest)), fragment)),
+        None => Ok((vec!(), fragment)),
         _ => Err(format!("Query didn't start with '?': '{}..'", before_fragment)),
     }
 }
@@ -1236,7 +1236,7 @@ mod tests {
 
     #[test]
     fn test_decode_form_urlencoded() {
-        assert_eq!(decode_form_urlencoded([]).unwrap().len(), 0);
+        assert_eq!(decode_form_urlencoded(&[]).unwrap().len(), 0);
 
         let s = "a=1&foo+bar=abc&foo+bar=12+%3D+34".as_bytes();
         let form = decode_form_urlencoded(s).unwrap();
