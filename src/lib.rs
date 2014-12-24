@@ -10,12 +10,6 @@
 
 //! Types/fns concerning URLs (see RFC 3986)
 
-#![crate_name = "url"]
-#![deprecated="This is being removed. Use rust-url instead. http://servo.github.io/rust-url/"]
-#![allow(deprecated)]
-#![crate_type = "rlib"]
-#![crate_type = "dylib"]
-#![license = "MIT/ASL2"]
 #![doc(html_logo_url = "http://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/nightly/",
@@ -23,7 +17,7 @@
 #![feature(default_type_params)]
 
 use std::collections::HashMap;
-use std::collections::hash_map::{Occupied, Vacant};
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::fmt;
 use std::str::FromStr;
 use std::hash;
