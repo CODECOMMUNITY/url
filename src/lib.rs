@@ -14,7 +14,6 @@
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/nightly/",
        html_playground_url = "http://play.rust-lang.org/")]
-#![feature(default_type_params)]
 
 use std::collections::HashMap;
 use std::collections::hash_map::Entry::{Occupied, Vacant};
@@ -41,7 +40,7 @@ use std::str;
 ///     Err(e) => println!("Couldn't parse '{}': {}", raw, e),
 /// }
 /// ```
-#[deriving(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Show)]
 pub struct Url {
     /// The scheme part of a URL, such as `https` in the above example.
     pub scheme: String,
@@ -55,7 +54,7 @@ pub struct Url {
     pub path: Path,
 }
 
-#[deriving(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Show)]
 pub struct Path {
     /// The path component of a URL, for example `/foo/bar`.
     pub path: String,
@@ -68,7 +67,7 @@ pub struct Path {
 }
 
 /// An optional subcomponent of a URI authority component.
-#[deriving(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Show)]
 pub struct UserInfo {
     /// The user name.
     pub user: String,
@@ -197,7 +196,7 @@ fn encode_inner<T: BytesContainer>(c: T, full_url: bool) -> String {
             '+' | ',' | ';' | '='
                 if full_url => out.push(b as char),
 
-            ch => out.push_str(format!("%{:02X}", ch as uint).as_slice()),
+            ch => out.push_str(format!("%{:02X}", ch as usize).as_slice()),
         };
 
         out
@@ -271,7 +270,7 @@ fn decode_inner<T: BytesContainer>(c: T, full_url: bool) -> DecodeResult<String>
 
                     // Only decode some characters if full_url:
                     let s = str::from_utf8(&bytes).unwrap();
-                    let u: uint = FromStrRadix::from_str_radix(s, 16u).unwrap();
+                    let u: usize = FromStrRadix::from_str_radix(s, 16).unwrap();
                     match u as u8 as char {
                         // gen-delims:
                         ':' | '/' | '?' | '#' | '[' | ']' | '@' |
@@ -281,8 +280,8 @@ fn decode_inner<T: BytesContainer>(c: T, full_url: bool) -> DecodeResult<String>
                         '+' | ',' | ';' | '='
                             if full_url => {
                             out.push('%');
-                            out.push(bytes[0u] as char);
-                            out.push(bytes[1u] as char);
+                            out.push(bytes[0] as char);
+                            out.push(bytes[1] as char);
                         }
 
                         ch => out.push(ch)
@@ -305,7 +304,7 @@ pub fn encode_form_urlencoded(m: &HashMap<String, Vec<String>>) -> String {
               | '0' ... '9'
               | '_' | '.' | '-' => out.push(b as char),
               ' ' => out.push('+'),
-              ch => out.push_str(format!("%{:X}", ch as uint).as_slice())
+              ch => out.push_str(format!("%{:X}", ch as usize).as_slice())
             }
 
             out
@@ -341,7 +340,7 @@ pub fn decode_form_urlencoded(s: &[u8])
                         value: String) {
         if key.len() > 0 && value.len() > 0 {
             match map.entry(key) {
-                Vacant(entry) => { entry.set(vec![value]); },
+                Vacant(entry) => { entry.insert(vec![value]); },
                 Occupied(mut entry) => { entry.get_mut().push(value); },
             }
         }
@@ -375,7 +374,7 @@ pub fn decode_form_urlencoded(s: &[u8])
                             };
 
                             let s = str::from_utf8(&bytes).unwrap();
-                            let u: uint = FromStrRadix::from_str_radix(s, 16u).unwrap();
+                            let u: usize = FromStrRadix::from_str_radix(s, 16).unwrap();
                             u as u8 as char
                         }
                         '+' => ' ',
@@ -407,7 +406,7 @@ fn split_char_first(s: &str, c: char) -> (&str, &str) {
     }
 }
 
-impl fmt::Show for UserInfo {
+impl fmt::String for UserInfo {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.pass {
             Some(ref pass) => write!(f, "{}:{}@", self.user, *pass),
@@ -507,7 +506,7 @@ fn get_authority(rawurl: &str) ->
         InPort // are in port
     }
 
-    #[deriving(Clone, PartialEq)]
+    #[derive(Clone, PartialEq, Eq)]
     enum Input {
         Digit, // all digits
         Hex, // digits and letters a-f
@@ -527,7 +526,7 @@ fn get_authority(rawurl: &str) ->
     let mut host = "";
     let mut port = None;
 
-    let mut colon_count = 0u;
+    let mut colon_count = 0;
     let mut pos = 0;
     let mut begin = 2;
     let mut end = len;
@@ -654,8 +653,8 @@ fn get_authority(rawurl: &str) ->
     // If we have a port string, ensure it parses to u16.
     let port = match port {
         None => None,
-        opt => match opt.and_then(|p| FromStr::from_str(p)) {
-            None => return Err(format!("Failed to parse port: {}", port)),
+        Some(s) => match FromStr::from_str(s) {
+            None => return Err(format!("Failed to parse port: {}", s)),
             opt => opt
         }
     };
@@ -723,7 +722,7 @@ impl FromStr for Path {
     }
 }
 
-impl fmt::Show for Url {
+impl fmt::String for Url {
     /// Converts a URL from `Url` to string representation.
     ///
     /// # Returns
@@ -752,7 +751,7 @@ impl fmt::Show for Url {
     }
 }
 
-impl fmt::Show for Path {
+impl fmt::String for Path {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         try!(write!(f, "{}", self.path));
         if !self.query.is_empty() {
@@ -768,13 +767,13 @@ impl fmt::Show for Path {
     }
 }
 
-impl<S: hash::Writer> hash::Hash<S> for Url {
+impl<S: hash::Writer + hash::Hasher> hash::Hash<S> for Url {
     fn hash(&self, state: &mut S) {
         self.to_string().hash(state)
     }
 }
 
-impl<S: hash::Writer> hash::Hash<S> for Path {
+impl<S: hash::Writer + hash::Hasher> hash::Hash<S> for Path {
     fn hash(&self, state: &mut S) {
         self.to_string().hash(state)
     }
@@ -877,7 +876,7 @@ mod tests {
     #[test]
     fn test_url_parse() {
         let url = "http://user:pass@rust-lang.org:8080/doc/~u?s=v#something";
-        let u = from_str::<Url>(url).unwrap();
+        let u = super::from_str(url).unwrap();
 
         assert_eq!(u.scheme, "http".to_string());
         assert_eq!(u.user, Some(UserInfo::new("user".to_string(), Some("pass".to_string()))));
@@ -891,7 +890,7 @@ mod tests {
     #[test]
     fn test_path_parse() {
         let path = "/doc/~u?s=v#something";
-        let u = from_str::<Path>(path).unwrap();
+        let u = path.parse::<Path>().unwrap();
 
         assert_eq!(u.path, "/doc/~u".to_string());
         assert_eq!(u.query, vec!(("s".to_string(), "v".to_string())));
@@ -901,7 +900,7 @@ mod tests {
     #[test]
     fn test_url_parse_host_slash() {
         let urlstr = "http://0.42.42.42/";
-        let url = from_str::<Url>(urlstr).unwrap();
+        let url = super::from_str(urlstr).unwrap();
         assert_eq!(url.host, "0.42.42.42".to_string());
         assert_eq!(url.path.path, "/".to_string());
     }
@@ -909,14 +908,14 @@ mod tests {
     #[test]
     fn test_path_parse_host_slash() {
         let pathstr = "/";
-        let path = from_str::<Path>(pathstr).unwrap();
+        let path = pathstr.parse::<Path>().unwrap();
         assert_eq!(path.path, "/".to_string());
     }
 
     #[test]
     fn test_url_host_with_port() {
         let urlstr = "scheme://host:1234";
-        let url = from_str::<Url>(urlstr).unwrap();
+        let url = super::from_str(urlstr).unwrap();
         assert_eq!(url.scheme, "scheme".to_string());
         assert_eq!(url.host, "host".to_string());
         assert_eq!(url.port, Some(1234));
@@ -924,7 +923,7 @@ mod tests {
         assert_eq!(url.path.path, "".to_string());
 
         let urlstr = "scheme://host:1234/";
-        let url = from_str::<Url>(urlstr).unwrap();
+        let url = super::from_str(urlstr).unwrap();
         assert_eq!(url.scheme, "scheme".to_string());
         assert_eq!(url.host, "host".to_string());
         assert_eq!(url.port, Some(1234));
@@ -934,28 +933,28 @@ mod tests {
     #[test]
     fn test_url_with_underscores() {
         let urlstr = "http://dotcom.com/file_name.html";
-        let url = from_str::<Url>(urlstr).unwrap();
+        let url = super::from_str(urlstr).unwrap();
         assert_eq!(url.path.path, "/file_name.html".to_string());
     }
 
     #[test]
     fn test_path_with_underscores() {
         let pathstr = "/file_name.html";
-        let path = from_str::<Path>(pathstr).unwrap();
+        let path = pathstr.parse::<Path>().unwrap();
         assert_eq!(path.path, "/file_name.html".to_string());
     }
 
     #[test]
     fn test_url_with_dashes() {
         let urlstr = "http://dotcom.com/file-name.html";
-        let url = from_str::<Url>(urlstr).unwrap();
+        let url = super::from_str(urlstr).unwrap();
         assert_eq!(url.path.path, "/file-name.html".to_string());
     }
 
     #[test]
     fn test_path_with_dashes() {
         let pathstr = "/file-name.html";
-        let path = from_str::<Path>(pathstr).unwrap();
+        let path = pathstr.parse::<Path>().unwrap();
         assert_eq!(path.path, "/file-name.html".to_string());
     }
 
@@ -973,21 +972,21 @@ mod tests {
     #[test]
     fn test_full_url_parse_and_format() {
         let url = "http://user:pass@rust-lang.org/doc?s=v#something";
-        let u = from_str::<Url>(url).unwrap();
+        let u = super::from_str(url).unwrap();
         assert_eq!(format!("{}", u).as_slice(), url);
     }
 
     #[test]
     fn test_userless_url_parse_and_format() {
         let url = "http://rust-lang.org/doc?s=v#something";
-        let u = from_str::<Url>(url).unwrap();
+        let u = super::from_str(url).unwrap();
         assert_eq!(format!("{}", u).as_slice(), url);
     }
 
     #[test]
     fn test_queryless_url_parse_and_format() {
         let url = "http://user:pass@rust-lang.org/doc#something";
-        let u = from_str::<Url>(url).unwrap();
+        let u = super::from_str(url).unwrap();
         assert_eq!(format!("{}", u).as_slice(), url);
     }
 
@@ -995,56 +994,56 @@ mod tests {
     fn test_empty_query_url_parse_and_format() {
         let url = "http://user:pass@rust-lang.org/doc?#something";
         let should_be = "http://user:pass@rust-lang.org/doc#something";
-        let u = from_str::<Url>(url).unwrap();
+        let u = super::from_str(url).unwrap();
         assert_eq!(format!("{}", u).as_slice(), should_be);
     }
 
     #[test]
     fn test_fragmentless_url_parse_and_format() {
         let url = "http://user:pass@rust-lang.org/doc?q=v";
-        let u = from_str::<Url>(url).unwrap();
+        let u = super::from_str(url).unwrap();
         assert_eq!(format!("{}", u).as_slice(), url);
     }
 
     #[test]
     fn test_minimal_url_parse_and_format() {
         let url = "http://rust-lang.org/doc";
-        let u = from_str::<Url>(url).unwrap();
+        let u = super::from_str(url).unwrap();
         assert_eq!(format!("{}", u).as_slice(), url);
     }
 
     #[test]
     fn test_url_with_port_parse_and_format() {
         let url = "http://rust-lang.org:80/doc";
-        let u = from_str::<Url>(url).unwrap();
+        let u = super::from_str(url).unwrap();
         assert_eq!(format!("{}", u).as_slice(), url);
     }
 
     #[test]
     fn test_scheme_host_only_url_parse_and_format() {
         let url = "http://rust-lang.org";
-        let u = from_str::<Url>(url).unwrap();
+        let u = super::from_str(url).unwrap();
         assert_eq!(format!("{}", u).as_slice(), url);
     }
 
     #[test]
     fn test_pathless_url_parse_and_format() {
         let url = "http://user:pass@rust-lang.org?q=v#something";
-        let u = from_str::<Url>(url).unwrap();
+        let u = super::from_str(url).unwrap();
         assert_eq!(format!("{}", u).as_slice(), url);
     }
 
     #[test]
     fn test_scheme_host_fragment_only_url_parse_and_format() {
         let url = "http://rust-lang.org#something";
-        let u = from_str::<Url>(url).unwrap();
+        let u = super::from_str(url).unwrap();
         assert_eq!(format!("{}", u).as_slice(), url);
     }
 
     #[test]
     fn test_url_component_encoding() {
         let url = "http://rust-lang.org/doc%20uments?ba%25d%20=%23%26%2B";
-        let u = from_str::<Url>(url).unwrap();
+        let u = super::from_str(url).unwrap();
         assert!(u.path.path == "/doc uments".to_string());
         assert!(u.path.query == vec!(("ba%d ".to_string(), "#&+".to_string())));
     }
@@ -1052,7 +1051,7 @@ mod tests {
     #[test]
     fn test_path_component_encoding() {
         let path = "/doc%20uments?ba%25d%20=%23%26%2B";
-        let p = from_str::<Path>(path).unwrap();
+        let p = path.parse::<Path>().unwrap();
         assert!(p.path == "/doc uments".to_string());
         assert!(p.query == vec!(("ba%d ".to_string(), "#&+".to_string())));
     }
@@ -1060,7 +1059,7 @@ mod tests {
     #[test]
     fn test_url_without_authority() {
         let url = "mailto:test@email.com";
-        let u = from_str::<Url>(url).unwrap();
+        let u = super::from_str(url).unwrap();
         assert_eq!(format!("{}", u).as_slice(), url);
     }
 
